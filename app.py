@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-st.set_page_config(page_title="Athenaeum — Library Management", layout="wide")
+st.set_page_config(page_title="BorrowHub — Library Management", layout="wide")
 
 # ---------------- Data ----------------
 def seed_books():
