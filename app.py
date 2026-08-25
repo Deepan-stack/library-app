@@ -51,10 +51,20 @@ NAV = {
     "Student": ["Dashboard", "Browse Catalog", "My Books", "Profile"],
 }
 
-# ---------------- Light styling ----------------
+# Replace your current st.markdown styling block with this:
 st.markdown("""
 <style>
-.block-container { padding-top: 1.4rem; }
+/* Adjust container padding so content isn't cut off by top bar */
+.block-container {
+    padding-top: 3.5rem !important;
+    padding-bottom: 2rem !important;
+}
+
+/* Add spacing above top elements */
+div[data-testid="stHorizontalBlock"] {
+    align-items: center;
+}
+
 div[data-testid="stMetric"] {
     background: var(--secondary-background-color);
     border-radius: 12px;
