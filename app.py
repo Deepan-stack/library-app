@@ -1,3 +1,4 @@
+import re
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -44,6 +45,10 @@ if "editing_id" not in st.session_state:
     st.session_state.editing_id = None
 if "confirm_delete_id" not in st.session_state:
     st.session_state.confirm_delete_id = None
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "email" not in st.session_state:
+    st.session_state.email = ""
 
 NAV = {
     "Admin": ["Dashboard", "Catalog", "Users", "Reports", "Settings"],
@@ -71,19 +76,46 @@ div[data-testid="stMetric"] {
 </style>
 """, unsafe_allow_html=True)
 
+# ---------------- Login gate ----------------
+def login_page():
+    st.markdown("### 📚 BorrowHub")
+    st.subheader("Sign in")
+    st.caption("Use your Gmail address and pick your role to continue.")
+
+    with st.form("login_form"):
+        email = st.text_input("Gmail address", placeholder="yourname@gmail.com")
+        role = st.radio("Role", list(NAV.keys()), horizontal=True)
+        submitted = st.form_submit_button("Continue", type="primary", use_container_width=True)
+
+        if submitted:
+            if not re.match(r"^[a-zA-Z0-9._%+-]+@gmail\.com$", email.strip()):
+                st.error("Please enter a valid @gmail.com address.")
+            else:
+                st.session_state.logged_in = True
+                st.session_state.email = email.strip().lower()
+                st.session_state.role = role
+                st.session_state.page = "Dashboard"
+                st.rerun()
+
+if not st.session_state.logged_in:
+    login_page()
+    st.stop()
+
+def logout():
+    st.session_state.logged_in = False
+    st.session_state.email = ""
+    st.session_state.page = "Dashboard"
+    st.rerun()
+
 # ---------------- Top bar ----------------
 top_l, top_m, top_r = st.columns([2, 3, 2])
 with top_l:
     st.markdown("### 📚 BorrowHub")
 with top_m:
-    role = st.radio("Role", list(NAV.keys()), horizontal=True, label_visibility="collapsed",
-                    index=list(NAV.keys()).index(st.session_state.role))
-    if role != st.session_state.role:
-        st.session_state.role = role
-        st.session_state.page = "Dashboard"
-        st.rerun()
+    st.markdown(f"<div style='color:gray;'>Signed in as <b>{st.session_state.email}</b> · {st.session_state.role}</div>", unsafe_allow_html=True)
 with top_r:
-    st.markdown(f"<div style='text-align:right; color:gray;'>Signed in as <b>{st.session_state.role}</b></div>", unsafe_allow_html=True)
+    if st.button("Log out", use_container_width=True):
+        logout()
 
 st.divider()
 
