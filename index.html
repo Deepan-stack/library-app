@@ -119,22 +119,48 @@
   .empty-state .body { font-size:13px; color:var(--sub); }
 
   canvas#trendChart { width:100%; height:220px; }
+
+  /* ---------------- Login screen ---------------- */
+  .login-screen { min-height:100vh; display:flex; align-items:center; justify-content:center;
+    background:var(--bg); padding:20px; }
+  .login-card { background:var(--surface); border:1px solid var(--line); border-radius:16px;
+    width:380px; max-width:100%; padding:32px 30px; }
+  .login-logo { display:flex; align-items:center; gap:10px; margin-bottom:22px; }
+  .login-brand { font-family:var(--display); font-size:19px; font-weight:700; }
+  .login-card h2 { margin:0 0 6px; font-family:var(--display); font-size:21px; }
+  .login-card .subtle { margin:0 0 22px; }
+  .role-options { display:flex; gap:8px; margin-bottom:6px; }
+  .role-option { flex:1; border:1px solid var(--line); border-radius:10px; padding:12px 8px;
+    text-align:center; font-size:12.5px; font-weight:600; color:var(--sub); background:var(--surface); }
+  .role-option .emoji { display:block; font-size:18px; margin-bottom:4px; }
+  .role-option.selected { border-color:var(--accent); background:var(--accent-soft); color:var(--accent); }
+  .btn-login { width:100%; margin-top:20px; background:var(--accent); color:#fff; border:none;
+    border-radius:9px; padding:11px 16px; font-size:14px; font-weight:600; }
+  .account-info { display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--sub); }
+  .account-info .role-pill { background:var(--accent-soft); color:var(--accent); font-weight:600;
+    padding:3px 10px; border-radius:999px; font-size:11.5px; }
+  .logout-btn { background:none; border:1px solid var(--line); border-radius:8px; padding:6px 12px;
+    font-size:12px; font-weight:600; color:var(--sub); }
 </style>
 </head>
 <body>
 
-<div class="topbar">
-  <div class="brand">
-    <div class="logo">📚</div>
-    <div class="brand-name">BorrowHub</div>
-  </div>
-  <div class="roles" id="roleSwitch"></div>
-  <div class="avatar" id="avatarInitials">AD</div>
-</div>
+<div id="loginScreen"></div>
 
-<div class="layout">
-  <div class="sidebar" id="sidebar"></div>
-  <div class="main" id="main"></div>
+<div id="appRoot" style="display:none">
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo">📚</div>
+      <div class="brand-name">BorrowHub</div>
+    </div>
+    <div class="account-info" id="accountInfo"></div>
+    <div class="avatar" id="avatarInitials">AD</div>
+  </div>
+
+  <div class="layout">
+    <div class="sidebar" id="sidebar"></div>
+    <div class="main" id="main"></div>
+  </div>
 </div>
 
 <div id="modalRoot"></div>
@@ -174,7 +200,8 @@ const PAGE_LABEL = { users:"Users", reports:"Reports", settings:"Settings", issu
   members:"Members", overdue:"Overdue & Fines", myBooks:"My books", profile:"Profile" };
 
 // ---------------- State ----------------
-let state = { role:"admin", page:"overview", query:"", category:"All", modal:null, editingBook:null, deletingBook:null };
+let state = { role:"admin", page:"overview", query:"", category:"All", modal:null, editingBook:null, deletingBook:null,
+  loggedIn:false, email:"", loginRole:"admin", loginError:"" };
 
 function esc(s){ const d=document.createElement("div"); d.textContent=s; return d.innerHTML; }
 function initials(t){ return t.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase(); }
@@ -185,12 +212,71 @@ function showToast(msg){
   setTimeout(()=> t.classList.remove("show"), 2200);
 }
 
+// ---------------- Login ----------------
+function renderLogin(){
+  const root = document.getElementById("loginScreen");
+  root.innerHTML = `
+    <div class="login-screen">
+      <div class="login-card">
+        <div class="login-logo">
+          <div class="logo">📚</div>
+          <div class="login-brand">BorrowHub</div>
+        </div>
+        <h2>Sign in</h2>
+        <p class="subtle">Use your Gmail address and pick your role to continue.</p>
+        <div class="field">
+          <label>Gmail address</label>
+          <input id="loginEmail" type="email" placeholder="yourname@gmail.com" value="${esc(state.email)}"/>
+        </div>
+        <div class="field">
+          <label>Role</label>
+          <div class="role-options">
+            ${Object.keys(ROLE_LABEL).map(r => `
+              <div class="role-option ${state.loginRole===r?'selected':''}" onclick="selectLoginRole('${r}')">
+                <span class="emoji">${r==="admin"?"🛡️":r==="librarian"?"📖":"🎓"}</span>${ROLE_LABEL[r]}
+              </div>`).join("")}
+          </div>
+        </div>
+        ${state.loginError ? `<div class="error-text">${esc(state.loginError)}</div>` : ""}
+        <button class="btn-login" onclick="handleLogin()">Continue</button>
+      </div>
+    </div>`;
+}
+
+function selectLoginRole(r){ state.loginRole = r; renderLogin(); }
+
+function handleLogin(){
+  const email = document.getElementById("loginEmail").value.trim().toLowerCase();
+  if (!/^[a-z0-9._%+-]+@gmail\.com$/.test(email)){
+    state.loginError = "Please enter a valid @gmail.com address.";
+    renderLogin();
+    return;
+  }
+  state.email = email;
+  state.role = state.loginRole;
+  state.loggedIn = true;
+  state.loginError = "";
+  state.page = "overview";
+  document.getElementById("loginScreen").innerHTML = "";
+  document.getElementById("appRoot").style.display = "";
+  renderAll();
+}
+
+function logout(){
+  state.loggedIn = false;
+  state.email = "";
+  state.loginError = "";
+  document.getElementById("appRoot").style.display = "none";
+  renderLogin();
+}
+
 // ---------------- Render: shell ----------------
 function renderTopbar(){
-  const rs = document.getElementById("roleSwitch");
-  rs.innerHTML = Object.keys(ROLE_LABEL).map(r =>
-    `<button class="role-btn ${state.role===r?'active':''}" onclick="changeRole('${r}')">${ROLE_LABEL[r]}</button>`
-  ).join("");
+  const info = document.getElementById("accountInfo");
+  info.innerHTML = `
+    <span>${esc(state.email)}</span>
+    <span class="role-pill">${ROLE_LABEL[state.role]}</span>
+    <button class="logout-btn" onclick="logout()">Log out</button>`;
   document.getElementById("avatarInitials").textContent =
     state.role==="admin" ? "AD" : state.role==="librarian" ? "LB" : "ST";
 }
@@ -202,7 +288,6 @@ function renderSidebar(){
   ).join("");
 }
 
-function changeRole(r){ state.role=r; state.page="overview"; renderAll(); }
 function changePage(p){ state.page=p; renderAll(); }
 
 function renderAll(){
@@ -487,7 +572,7 @@ function confirmDelete(){
 }
 
 // ---------------- Init ----------------
-renderAll();
+renderLogin();
 </script>
 </body>
 </html>
