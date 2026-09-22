@@ -74,7 +74,7 @@ div[data-testid="stMetric"] {
 # ---------------- Top bar ----------------
 top_l, top_m, top_r = st.columns([2, 3, 2])
 with top_l:
-    st.markdown("### 📚 BorrowHub")
+    st.markdown("### 📚 BorroW")
 with top_m:
     role = st.radio("Role", list(NAV.keys()), horizontal=True, label_visibility="collapsed",
                     index=list(NAV.keys()).index(st.session_state.role))
